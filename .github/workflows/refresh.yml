@@ -1,0 +1,45 @@
+name: Refresh Strava data
+
+on:
+  schedule:
+    - cron: '30 20 * * *'   # daily, 20:30 UTC (21:30 BST / 20:30 GMT)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch new activities
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: node scripts/refresh-strava.mjs
+      - run: npm run validate
+      - name: Commit and redeploy if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- public/data/activities.csv; then
+            echo "No new data."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/activities.csv
+          git commit -m "data: refresh Strava activities"
+          git push
+          # Pushes made with GITHUB_TOKEN don't trigger other workflows, so start the deploy explicitly.
+          gh workflow run deploy.yml --ref main
