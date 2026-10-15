@@ -44,17 +44,10 @@ Give the task access to this repo and to the Strava connector, then use this pro
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which republishes the site.
 A weekly or daily schedule is plenty; Strava activities rarely arrive more than once a day.
 
-## Rolling window
+## Incremental refresh
 
-The window is the last 12 months. Each refresh re-pulls that whole window, so activities that
-fall out of it drop off and edits or deletions made in Strava are picked up.
-
-## GitHub Action refresh (incremental)
-
-`.github/workflows/refresh.yml` runs daily and executes `scripts/refresh-strava.mjs`, which asks the
-Strava API only for activities since the latest row (3 day overlap), merges them by id, validates,
-commits and triggers a redeploy. It needs three repository secrets (Settings, Secrets and variables,
-Actions): `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` (from an API app at
-https://www.strava.com/settings/api, with a refresh token authorised for `activity:read_all`).
-The Claude connector cannot be used from GitHub Actions, which is why the scheduled Claude task
-exists as the credential-free path.
+The scheduled Claude task runs daily at 9pm and only appends. It reads the latest  in the CSV,
+asks the Strava connector for activities from 3 days before that, keeps Runs and Swims, merges them by
+ (new rows added, changed rows replaced), keeps the file sorted oldest first, and runs
+ before committing. GitHub Actions cannot use the Claude connector, so there is no
+Action-based refresh; the deploy workflow republishes on every push to main.
