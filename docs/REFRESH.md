@@ -27,27 +27,18 @@ refresh can never replace the live site.
 
 ## Prompt for the scheduled Claude task
 
-Give the task access to this repo and to the Strava connector, then use this prompt:
+Runs daily at 9pm Europe/London with access to this repo and the Strava connector:
 
-> In this repo, refresh `public/data/activities.csv` from Strava.
-> 1. Call the Strava `list_activities` tool with `range_start` = the first day of the month
->    twelve months ago (local time) and no end date, `ordering` = `StartDateLocalAsc`,
->    `first` = 100, and keep paging with `after` = `end_cursor` until `has_next_page` is false.
-> 2. Keep only activities whose `sport_type` is `Run` or `Swim`.
-> 3. Write the CSV exactly as described in `docs/REFRESH.md` (same header, oldest first):
->    id, start_local, sport_type, name, distance (summary.distance), moving_time,
->    elapsed_time, elevation_gain.
-> 4. Run `npm ci && npm run validate`. If validation fails, fix the file; never commit a file that fails.
-> 5. If the CSV changed, commit it to `main` with the message `data: refresh Strava activities`
->    and push. If nothing changed, do nothing.
+> In this repo, append any new Strava activities to `public/data/activities.csv`.
+> 1. Read the latest `start_local` in the CSV. Call the Strava `list_activities` tool with
+>    `range_start` = 3 days before that date, `ordering` = `StartDateLocalAsc`, `first` = 100,
+>    paging with `after` = `end_cursor` until `has_next_page` is false.
+> 2. Keep only `Run` and `Swim` activities and map them to the CSV columns above.
+> 3. Merge by `id`: add new rows, replace rows whose values changed, never delete existing rows.
+>    Keep the file sorted oldest first.
+> 4. Run `npm ci && npm run validate`. If validation fails, fix the file; never commit one that fails.
+> 5. If the CSV changed, commit `data: refresh Strava activities` to `main` and push (this triggers the
+>    Pages deploy). If nothing changed, do nothing.
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which republishes the site.
-A weekly or daily schedule is plenty; Strava activities rarely arrive more than once a day.
-
-## Incremental refresh
-
-The scheduled Claude task runs daily at 9pm and only appends. It reads the latest  in the CSV,
-asks the Strava connector for activities from 3 days before that, keeps Runs and Swims, merges them by
- (new rows added, changed rows replaced), keeps the file sorted oldest first, and runs
- before committing. GitHub Actions cannot use the Claude connector, so there is no
-Action-based refresh; the deploy workflow republishes on every push to main.
+GitHub Actions cannot use the Claude connector, so there is no Action-based refresh; the deploy
+workflow republishes on every push to main.
