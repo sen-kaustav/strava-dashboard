@@ -151,3 +151,4 @@ id,start_local,sport_type,name,distance_m,moving_time_s,elapsed_time_s,elevation
 20873785036,2026-11-05T18:33:39,Run,Evening Run,5011.3,1721,1754,19
 20910536974,2026-11-07T16:52:52,Swim,Afternoon Swim,600,898,1110,0
 20910552812,2026-11-08T14:34:14,Run,Afternoon Run,8013.4,2558,2574,18
+20943387186,2026-11-10T18:26:32,Run,Evening Run,5027,1834,1862,16
